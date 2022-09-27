@@ -5,6 +5,6 @@ function love.conf (t)
   t.window.title = 'Enet Server'
   -- t.modules.window = false
   -- t.modules.graphics = false
-  t.modules.image = false
+  -- t.modules.image = false
   t.modules.audio = false
 end
