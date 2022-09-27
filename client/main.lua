@@ -9,6 +9,8 @@ local timer = 0
 local keys = {}
 local event
 
+local DT = 0
+
 local state = {100, 100}
 
 local function join (tbl)
@@ -42,7 +44,13 @@ function love.load(args)
 end
 
 function love.update(dt)
-  timer = timer + dt
+  DT = DT + dt
+
+  if DT > 1/60 then
+    DT = 0
+  end
+  
+  timer = timer + DT
   event = host:service()
 
   if timer >= tick then
@@ -60,6 +68,8 @@ end
 
 function love.draw ()
   love.graphics.setColor(255, 255, 255)
+
+  love.graphics.print(peer:round_trip_time(), 0, 0)
 
   if state[1] then
     love.graphics.rectangle('fill', tonumber(state[1]), tonumber(state[2]), 10, 10)

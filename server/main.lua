@@ -67,7 +67,7 @@ function love.load (args)
 	host = enet.host_create("localhost:3000")
 end
 
-function love.update (dt)
+function love.update ()
   event = host:service(100)
 
   if event then
