@@ -8,6 +8,8 @@ local state = {
   clients = {},
 }
 
+local world
+
 local function parse (str)
   local result = {}
 
@@ -43,6 +45,7 @@ local function stringify (tbl)
   local result = ''
   local len = 0
   local i = 0
+  local x, y
 
   for k,v in pairs(tbl) do
     len = len + 1
@@ -50,12 +53,13 @@ local function stringify (tbl)
 
   for k,v in pairs(tbl) do
     i = i + 1
+    x,y = v.body:getPosition()
 
     if i == len then
-      result = result .. v.x .. ',' .. v.y
+      result = result .. x .. ',' .. y
     else
       
-      result = result .. v.x .. ',' .. v.y .. ','
+      result = result .. x .. ',' .. y .. ','
     end
   end
 
@@ -65,15 +69,25 @@ end
 function love.load (args)
 	-- establish host for receiving msg
 	host = enet.host_create("localhost:3000")
+
+  world = love.physics.newWorld(0, 0, false)
 end
 
-function love.update ()
+function love.update (dt)
   event = host:service(100)
+  world:update(dt)
 
   if event then
     if event.type == "connect" then
       if state.clients[event.peer] == nil then
         state.clients[event.peer] = createClient()
+        state.clients[event.peer].body = love.physics.newBody(world, 10, 10, 'dynamic')
+        state.clients[event.peer].shape = love.physics.newRectangleShape(10, 10)
+        state.clients[event.peer].fixture = love.physics.newFixture(
+          state.clients[event.peer].body,
+          state.clients[event.peer].shape,
+          1
+        )
       end
     end
 
@@ -82,19 +96,19 @@ function love.update ()
       state.clients[event.peer].input = event.data
       
       if contains(keys, 'up') then
-        state.clients[event.peer].y = state.clients[event.peer].y - 10
+        state.clients[event.peer].body:applyForce(0, -50)
       end
 
       if contains(keys, 'right') then
-        state.clients[event.peer].x = state.clients[event.peer].x + 10
+        state.clients[event.peer].body:applyForce(50, 0)
       end
 
       if contains(keys, 'down') then
-        state.clients[event.peer].y = state.clients[event.peer].y + 10
+        state.clients[event.peer].body:applyForce(0, 50)
       end
 
       if contains(keys, 'left') then
-        state.clients[event.peer].x = state.clients[event.peer].x - 10
+        state.clients[event.peer].body:applyForce(-50, 0)
       end
       
       host:broadcast(stringify(state.clients))

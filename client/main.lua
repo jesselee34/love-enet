@@ -46,6 +46,11 @@ end
 function love.update(dt)
   DT = DT + dt
 
+  if love.keyboard.isDown('up') then table.insert(keys, 'up') end
+  if love.keyboard.isDown('down') then table.insert(keys, 'down') end
+  if love.keyboard.isDown('left') then table.insert(keys, 'left') end
+  if love.keyboard.isDown('right') then table.insert(keys, 'right') end
+
   if DT > 1/60 then
     DT = 0
   end
@@ -82,8 +87,4 @@ end
 
 function love.quit ()
   peer:disconnect()
-end
-
-function love.keypressed (k)
-  table.insert(keys, k)
 end
