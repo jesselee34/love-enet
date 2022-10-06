@@ -11,7 +11,13 @@ local event
 
 local DT = 0
 
-local state = {100, 100}
+local state = {
+  { x = 10, y = 10, vx = 0, vy = 0 }
+}
+
+local localState = {}
+
+local world
 
 local function join (tbl)
   local result = ''
@@ -28,19 +34,41 @@ local function join (tbl)
 end
 
 local function parse (str)
-  local result = {}
+  local parsed = {}
+  local clients = {}
 
   for token in string.gmatch(str, '[^,]+') do
-    table.insert(result, token)
+    table.insert(parsed, token)
   end
 
-  return result
+
+  if parsed[1] then
+    table.insert(clients, {
+      x = tonumber(parsed[1]),
+      y = tonumber(parsed[2]),
+      vx = tonumber(parsed[3]),
+      vy = tonumber(parsed[4]) 
+    })
+  end
+
+  if parsed[5] then
+    table.insert(clients, {
+      x = tonumber(parsed[5]),
+      y = tonumber(parsed[6]),
+      vx = tonumber(parsed[7]),
+      vy = tonumber(parsed[8]) 
+    })
+  end
+  
+
+  return clients
 end
 
 function love.load(args)
 	-- establish a connection to host on same PC
 	host = enet.host_create()
   peer = host:connect("localhost:3000")
+  world = love.physics.newWorld(0, 0, false)
 end
 
 function love.update(dt)
@@ -69,6 +97,23 @@ function love.update(dt)
       state = parse(event.data)
     end
   end
+
+  for i,v in ipairs(state) do
+    if localState[i] == nil then
+      local body = love.physics.newBody(world, 0, 0, 'dynamic')
+      local shape = love.physics.newRectangleShape(10, 10)
+      local fixture = love.physics.newFixture(body, shape, 1)
+
+      localState[i] = {
+        body = body,
+        shape = shape, 
+        fixture = fixture
+      }
+    end
+
+    localState[i].body:setPosition(v.x, v.y)
+    localState[i].body:setLinearVelocity(v.vx, v.vy)
+  end
 end
 
 function love.draw ()
@@ -76,12 +121,14 @@ function love.draw ()
 
   love.graphics.print(peer:round_trip_time(), 0, 0)
 
-  if state[1] then
-    love.graphics.rectangle('fill', tonumber(state[1]), tonumber(state[2]), 10, 10)
+  if localState[1] then
+    local x,y = localState[1].body:getPosition()
+    love.graphics.rectangle('fill', x, y, 10, 10)
   end
 
-  if state[3] then
-    love.graphics.rectangle('fill', tonumber(state[3]), tonumber(state[4]), 10, 10)
+  if localState[2] then
+    local x,y = localState[2].body:getPosition()
+    love.graphics.rectangle('fill', x, y, 10, 10)
   end
 end
 

@@ -53,13 +53,14 @@ local function stringify (tbl)
 
   for k,v in pairs(tbl) do
     i = i + 1
-    x,y = v.body:getPosition()
+    x, y = v.body:getPosition()
+    vx, vy = v.body:getLinearVelocity()
 
     if i == len then
-      result = result .. x .. ',' .. y
+      result = result .. x .. ',' .. y .. ',' .. vx .. ',' .. vy
     else
       
-      result = result .. x .. ',' .. y .. ','
+      result = result .. x .. ',' .. y .. ',' .. vx .. ',' .. vy .. ','
     end
   end
 
