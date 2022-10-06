@@ -95,21 +95,30 @@ function love.update (dt)
     if event.type == "receive" then
       local keys = parse(event.data)
       state.clients[event.peer].input = event.data
+      local vx, vy = state.clients[event.peer].body:getLinearVelocity()
       
       if contains(keys, 'up') then
-        state.clients[event.peer].body:applyForce(0, -50)
+        if vy > -200 then
+          state.clients[event.peer].body:applyForce(0, -50)
+        end
       end
 
       if contains(keys, 'right') then
-        state.clients[event.peer].body:applyForce(50, 0)
+        if vx < 200 then
+          state.clients[event.peer].body:applyForce(50, 0)
+        end
       end
 
       if contains(keys, 'down') then
-        state.clients[event.peer].body:applyForce(0, 50)
+        if vy < 200 then
+          state.clients[event.peer].body:applyForce(0, 50)
+        end
       end
 
       if contains(keys, 'left') then
-        state.clients[event.peer].body:applyForce(-50, 0)
+        if vx > -200 then
+          state.clients[event.peer].body:applyForce(-50, 0)
+        end
       end
       
       host:broadcast(stringify(state.clients))

@@ -95,25 +95,31 @@ function love.update(dt)
   if event then
     if event.type == 'receive' then
       state = parse(event.data)
+
+      for i,v in ipairs(state) do
+        if localState[i] == nil then
+          local body = love.physics.newBody(world, 0, 0, 'dynamic')
+          local shape = love.physics.newRectangleShape(10, 10)
+          local fixture = love.physics.newFixture(body, shape, 1)
+    
+          localState[i] = {
+            body = body,
+            shape = shape, 
+            fixture = fixture
+          }
+        end
+    
+        local x,y = localState[i].body:getPosition()
+        if math.abs(x - v.x) > 30 or math.abs(y - v.y) > 30 then
+          localState[i].body:setPosition(v.x, v.y)
+        end
+
+        localState[i].body:setLinearVelocity(v.vx, v.vy)
+      end
     end
   end
 
-  for i,v in ipairs(state) do
-    if localState[i] == nil then
-      local body = love.physics.newBody(world, 0, 0, 'dynamic')
-      local shape = love.physics.newRectangleShape(10, 10)
-      local fixture = love.physics.newFixture(body, shape, 1)
-
-      localState[i] = {
-        body = body,
-        shape = shape, 
-        fixture = fixture
-      }
-    end
-
-    localState[i].body:setPosition(v.x, v.y)
-    localState[i].body:setLinearVelocity(v.vx, v.vy)
-  end
+  world:update(dt)
 end
 
 function love.draw ()
