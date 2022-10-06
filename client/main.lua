@@ -18,6 +18,9 @@ local state = {
 local localState = {}
 
 local world
+local leftB, rightB, topB, bottomB
+local leftS, rightS, topS, bottomS
+local leftF, rightF, topF, bottomF
 
 local function join (tbl)
   local result = ''
@@ -69,6 +72,21 @@ function love.load(args)
 	host = enet.host_create()
   peer = host:connect("localhost:3000")
   world = love.physics.newWorld(0, 0, false)
+
+  leftB = love.physics.newBody(world, 0, 300, 'static')
+  rightB = love.physics.newBody(world, 800, 300, 'static')
+  topB = love.physics.newBody(world, 400, 0, 'static')
+  bottomB = love.physics.newBody(world, 400, 600, 'static')
+
+  leftS = love.physics.newRectangleShape(10, 600)
+  rightS = love.physics.newRectangleShape(10, 600)
+  topS = love.physics.newRectangleShape(800, 10)
+  bottomS = love.physics.newRectangleShape(800, 10)
+
+  leftF = love.physics.newFixture(leftB, leftS)
+  rightF = love.physics.newFixture(rightB, rightS)
+  topF = love.physics.newFixture(topB, topS)
+  bottomF = love.physics.newFixture(bottomB, bottomS)
 end
 
 function love.update(dt)
@@ -110,7 +128,7 @@ function love.update(dt)
         end
     
         local x,y = localState[i].body:getPosition()
-        if math.abs(x - v.x) > 30 or math.abs(y - v.y) > 30 then
+        if math.abs(x - v.x) > 10 or math.abs(y - v.y) > 5 then
           localState[i].body:setPosition(v.x, v.y)
         end
 
@@ -129,13 +147,19 @@ function love.draw ()
 
   if localState[1] then
     local x,y = localState[1].body:getPosition()
-    love.graphics.rectangle('fill', x, y, 10, 10)
+    love.graphics.rectangle('fill', x - 5, y - 5, 10, 10)
   end
 
   if localState[2] then
     local x,y = localState[2].body:getPosition()
-    love.graphics.rectangle('fill', x, y, 10, 10)
+    love.graphics.rectangle('fill', x - 5, y - 5, 10, 10)
   end
+
+  love.graphics.setColor(1, 1, 1)
+  love.graphics.polygon('fill', leftB:getWorldPoints(leftS:getPoints()))
+  love.graphics.polygon('fill', rightB:getWorldPoints(rightS:getPoints()))
+  love.graphics.polygon('fill', topB:getWorldPoints(topS:getPoints()))
+  love.graphics.polygon('fill', bottomB:getWorldPoints(bottomS:getPoints()))
 end
 
 function love.quit ()
