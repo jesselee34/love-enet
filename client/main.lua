@@ -102,7 +102,14 @@ function love.update(dt)
   end
   
   timer = timer + DT
-  event = host:service()
+  
+  local status, error = pcall(function ()
+    event = host:service()
+  end)
+
+  if error then
+    print(error)
+  end
 
   if timer >= tick then
     timer = 0
