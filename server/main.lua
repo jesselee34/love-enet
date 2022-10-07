@@ -9,6 +9,9 @@ local state = {
 }
 
 local world
+local leftB, rightB, topB, bottomB
+local leftS, rightS, topS, bottomS
+local leftF, rightF, topF, bottomF
 
 local function parse (str)
   local result = {}
@@ -71,6 +74,21 @@ function love.load (args)
 	host = enet.host_create("localhost:3000")
 
   world = love.physics.newWorld(0, 0, false)
+
+  leftB = love.physics.newBody(world, 0, 300, 'static')
+  rightB = love.physics.newBody(world, 800, 300, 'static')
+  topB = love.physics.newBody(world, 400, 0, 'static')
+  bottomB = love.physics.newBody(world, 400, 600, 'static')
+
+  leftS = love.physics.newRectangleShape(10, 600)
+  rightS = love.physics.newRectangleShape(10, 600)
+  topS = love.physics.newRectangleShape(800, 10)
+  bottomS = love.physics.newRectangleShape(800, 10)
+
+  leftF = love.physics.newFixture(leftB, leftS)
+  rightF = love.physics.newFixture(rightB, rightS)
+  topF = love.physics.newFixture(topB, topS)
+  bottomF = love.physics.newFixture(bottomB, bottomS)
 end
 
 function love.update (dt)
@@ -125,6 +143,12 @@ function love.draw ()
     love.graphics.print('inputs: ' .. v.input, 10, offset)
     offset = offset + 20
   end
+
+  love.graphics.setColor(1, 1, 1)
+  love.graphics.polygon('fill', leftB:getWorldPoints(leftS:getPoints()))
+  love.graphics.polygon('fill', rightB:getWorldPoints(rightS:getPoints()))
+  love.graphics.polygon('fill', topB:getWorldPoints(topS:getPoints()))
+  love.graphics.polygon('fill', bottomB:getWorldPoints(bottomS:getPoints()))
 end
 
 function love.quit ()
