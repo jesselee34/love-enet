@@ -66,6 +66,8 @@ local function stringify (tbl)
     end
   end
 
+  result = result .. ',' .. '1' .. ',' .. '1'
+
   return result
 end
 
@@ -129,7 +131,7 @@ function love.update (dt)
         state.clients[event.peer].body:applyForce(-50, 0)
       end
       
-      host:broadcast(stringify(state.clients), 0, 'unreliable')
+      host:broadcast(stringify(state.clients))
     end
   end
 end

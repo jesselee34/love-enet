@@ -46,16 +46,30 @@ local function interpolate (rdt, stateOne, stateTwo)
   local y1 = stateOne[2]
   local x2 = stateTwo[1]
   local y2 = stateTwo[2]
-  local x = x1 + ((x1 - x2) * (rdt/tick))
+  local x = x1 + ((x2 - x1) * (rdt/tick))
   local y = y1 + (x - x1) * ((y2 - y1) / (x2 - x1))
 
-  return { x, y }
+  local result = { x, y }
+
+  if stateOne[3] then
+    x1 = stateOne[3]
+    y1 = stateOne[4]
+    x2 = stateTwo[3]
+    y2 = stateTwo[4]
+    x = x1 + ((x2 - x1) * (rdt/tick))
+    y = y1 + (x - x1) * ((y2 - y1) / (x2 - x1))
+    table.insert(result, x)
+    table.insert(result, y)
+  end
+
+  return result
 end
 
 function love.load(args)
 	-- establish a connection to host on same PC
 	host = enet.host_create()
   peer = host:connect("localhost:3000")
+  -- peer = host:connect("159.223.99.80:2555")
 end
 
 function love.update(dt)
@@ -91,8 +105,8 @@ function love.update(dt)
     end
 
     if state[1] and state[2] then
-      -- currentState = interpolate(rdt, state[1], state[2])
-      currentState = state[1]
+      currentState = interpolate(rdt, state[1], state[2])
+      -- currentState = state[1]
     end
   end
 
@@ -100,7 +114,7 @@ function love.update(dt)
     if event.type == 'receive' then
       table.insert(state, parse(event.data))
 
-      if readyFlag == false and #state >= 4 then
+      if readyFlag == false and #state >= 3 then
         currentState = state[1]
         readyFlag = true
       end
