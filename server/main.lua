@@ -129,7 +129,7 @@ function love.update (dt)
         state.clients[event.peer].body:applyForce(-50, 0)
       end
       
-      host:broadcast(stringify(state.clients))
+      host:broadcast(stringify(state.clients), 0, 'unreliable')
     end
   end
 end
@@ -142,9 +142,10 @@ function love.draw ()
   for k,v in pairs(state.clients) do
     love.graphics.print('inputs: ' .. v.input, 10, offset)
     offset = offset + 20
+
+    love.graphics.polygon('fill', v.body:getWorldPoints(v.shape:getPoints()))
   end
 
-  love.graphics.setColor(1, 1, 1)
   love.graphics.polygon('fill', leftB:getWorldPoints(leftS:getPoints()))
   love.graphics.polygon('fill', rightB:getWorldPoints(rightS:getPoints()))
   love.graphics.polygon('fill', topB:getWorldPoints(topS:getPoints()))

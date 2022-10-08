@@ -4,7 +4,7 @@ inspect = require 'inspect'
 host = nil
 peer = nil
 
-local tick = 0.015
+local tick = 0.016
 local timer = 0
 local keys = {}
 local event
@@ -15,6 +15,7 @@ local rdt = 0
 
 local state = {}
 local currentState
+local readyFlag = false
 
 local function join (tbl)
   local result = ''
@@ -40,13 +41,13 @@ local function parse (str)
   return result
 end
 
-local function interpolate (rdt, pt1, pt2)
-  local x1 = pt1[1]
-  local y1 = pt1[2]
-  local x2 = pt2[1]
-  local y2 = pt2[2]
-  local x = (x1 - x2) * (rdt/(1/60))
-  local y = y1 + ((x - x1) / (x2 - x1)) * (y2 - y1)
+local function interpolate (rdt, stateOne, stateTwo)
+  local x1 = stateOne[1]
+  local y1 = stateOne[2]
+  local x2 = stateTwo[1]
+  local y2 = stateTwo[2]
+  local x = x1 + ((x1 - x2) * (rdt/tick))
+  local y = y1 + (x - x1) * ((y2 - y1) / (x2 - x1))
 
   return { x, y }
 end
@@ -65,41 +66,43 @@ function love.update(dt)
   if love.keyboard.isDown('left') then table.insert(keys, 'left') end
   if love.keyboard.isDown('right') then table.insert(keys, 'right') end
 
-  if DT > 1/60 then
+  if DT > tick then
     DT = 0
   end
   
-  timer = timer + DT
   
   local status, error = pcall(function ()
     event = host:service()
   end)
-
+  
+  timer = timer + DT
   if timer >= tick then
     timer = 0
     peer:send(join(keys))
     keys = {}
   end
 
-  if currentState then
+  if readyFlag then
     rdt = rdt + DT
 
-    if rdt >= 1/60 then
-      rdt = 1/60 - rdt
+    if rdt >= tick then
+      rdt = 0
       table.remove(state, 1)
     end
 
-    -- TODO: Make sure state[2] exists need to pause
-
-    currentState = interpolate(rdt, state[1], state[2])
+    if state[1] and state[2] then
+      -- currentState = interpolate(rdt, state[1], state[2])
+      currentState = state[1]
+    end
   end
 
   if event then
     if event.type == 'receive' then
       table.insert(state, parse(event.data))
 
-      if #state >= 4 then
+      if readyFlag == false and #state >= 4 then
         currentState = state[1]
+        readyFlag = true
       end
     end
   end
@@ -108,14 +111,14 @@ end
 function love.draw ()
   love.graphics.setColor(255, 255, 255)
 
-  love.graphics.print(peer:round_trip_time(), 0, 0)
+  love.graphics.print(peer:round_trip_time(), 10, 10)
 
   if currentState and currentState[1] then
-    love.graphics.rectangle('fill', tonumber(currentState[1]), tonumber(currentState[2]), 10, 10)
+    love.graphics.rectangle('fill', tonumber(currentState[1]) - 5, tonumber(currentState[2]) - 5, 10, 10)
   end
 
   if currentState and currentState[3] then
-    love.graphics.rectangle('fill', tonumber(currentState[3]), tonumber(currentState[4]), 10, 10)
+    love.graphics.rectangle('fill', tonumber(currentState[3]) - 5, tonumber(currentState[4]) - 5, 10, 10)
   end
 end
 
