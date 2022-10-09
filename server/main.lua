@@ -17,11 +17,14 @@ local leftB, rightB, topB, bottomB
 local leftS, rightS, topS, bottomS
 local leftF, rightF, topF, bottomF
 
-local function createClient ()
+local function createClient (peer)
   return {
-    input = '',
+    input = {},
     x = 100,
-    y = 100
+    y = 100,
+    zombieCount = 0,
+    silentCount = 0,
+    peer = peer
   }
 end
 
@@ -42,9 +45,11 @@ end
 
 local function pack (frm, clients)
   local result = { frame = frm }
+  local x,y
 
   for k,v in pairs(clients) do
-    table.insert(result, { v.body:getPosition() })
+    x,y = v.body:getPosition()
+    table.insert(result, { math.floor(x), math.floor(y) })
   end
 
   return TSerial.pack(result)
@@ -77,32 +82,52 @@ function love.update (dt)
   timer = timer + DT
   if DT >= tick then DT = tick end
   
-  event = host:service(100)
+  event = host:service(20)
   world:update(DT)
 
   if event then
     if event.type == "connect" then
-      if state.clients[event.peer] == nil then
-        state.clients[event.peer] = createClient()
-        state.clients[event.peer].body = love.physics.newBody(world, 10, 10, 'dynamic')
-        state.clients[event.peer].shape = love.physics.newRectangleShape(10, 10)
-        state.clients[event.peer].fixture = love.physics.newFixture(
-          state.clients[event.peer].body,
-          state.clients[event.peer].shape,
+      if state.clients[event.peer:connect_id()] == nil then
+        state.clients[event.peer:connect_id()] = createClient(event.peer)
+        state.clients[event.peer:connect_id()].body = love.physics.newBody(world, 10, 10, 'dynamic')
+        state.clients[event.peer:connect_id()].shape = love.physics.newRectangleShape(10, 10)
+        state.clients[event.peer:connect_id()].fixture = love.physics.newFixture(
+          state.clients[event.peer:connect_id()].body,
+          state.clients[event.peer:connect_id()].shape,
           1
         )
 
-        state.clients[event.peer].body:setFixedRotation(true)
+        state.clients[event.peer:connect_id()].body:setFixedRotation(true)
       end
-    end
-
-    if event.type == "disconnect" then
-      state.clients[event.peer] = nil
     end
 
     if event.type == "receive" then
       local keys = TSerial.unpack(event.data)
-      state.clients[event.peer].input = keys
+      state.clients[event.peer:connect_id()].input = keys
+    end
+  end
+
+  -- Handle any zombie or disconnected peers
+  for k,v in pairs(state.clients) do
+    print(v.peer:state())
+    if v.peer:state() == 'zombie' or v.peer:state() == 'disconnected' then
+      v.zombieCount = v.zombieCount + DT
+    else
+      v.zombieCount = 0
+    end
+
+    if v.zombieCount >= 5 then
+      v.peer:disconnect()
+      v.body:destroy()
+      state.clients[k] = nil
+    end
+
+    if #v.input == 0 then
+      v.silentCount = v.silentCount + DT
+    end
+
+    if v.silentCount >= 30 then
+      v.peer:reset()
     end
   end
 
