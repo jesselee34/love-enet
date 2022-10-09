@@ -3,13 +3,14 @@ local TSerial = require 't-serial'
 
 local host = nil
 local peer = nil
-local tick = 0.0166
+local tick = 0.012
 local sendFrequency = 0.0166
 local sendTimer = 0
 local keys = {}
 local event
 local URI = 'localhost:3000'
 -- local URI = '159.223.99.80:2555'
+-- local URI = '143.198.226.185:2555'
 
 local DT = 0
 -- rdt is the time since the last 1/60 tick.
@@ -72,7 +73,6 @@ function love.update(dt)
   if sendTimer >= sendFrequency then
     sendTimer = 0
     peer:send(TSerial.pack(keys))
-    host:flush()
   end
 
   local status, error = pcall(function ()
@@ -87,7 +87,7 @@ function love.update(dt)
 
   if #state >= 4 then
     -- If we're ever 16 frames behind, catch up.
-    if #state >= 16 then
+    if #state > 8 then
       for i=1,#state - 4,1 do
         table.remove(state, 1)
       end

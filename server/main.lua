@@ -7,7 +7,6 @@ local DT = 0
 local tick = 0.0166
 local timer = 0
 local frame = 1
-local time = 0
 
 local state = {
   clients = {},
@@ -160,7 +159,6 @@ function love.update (dt)
   if timer >= tick then
     timer = 0
     host:broadcast(pack(frame, state.clients), 0, 'unreliable')
-    host:flush()
     frame = frame + 1
 
     if frame >= 60 then
