@@ -81,8 +81,11 @@ function love.update (dt)
   DT = dt
   timer = timer + DT
   if DT >= tick then DT = tick end
+
+  local status, error = pcall(function ()
+    event = host:service(100)
+  end)
   
-  event = host:service(20)
   world:update(DT)
 
   if event then
@@ -108,28 +111,27 @@ function love.update (dt)
   end
 
   -- Handle any zombie or disconnected peers
-  for k,v in pairs(state.clients) do
-    print(v.peer:state())
-    if v.peer:state() == 'zombie' or v.peer:state() == 'disconnected' then
-      v.zombieCount = v.zombieCount + DT
-    else
-      v.zombieCount = 0
-    end
+  -- for k,v in pairs(state.clients) do
+  --   if v.peer:state() == 'zombie' or v.peer:state() == 'disconnected' then
+  --     v.zombieCount = v.zombieCount + DT
+  --   else
+  --     v.zombieCount = 0
+  --   end
 
-    if v.zombieCount >= 5 then
-      v.peer:disconnect()
-      v.body:destroy()
-      state.clients[k] = nil
-    end
+  --   if v.zombieCount >= 5 then
+  --     v.peer:disconnect()
+  --     v.body:destroy()
+  --     state.clients[k] = nil
+  --   end
 
-    if #v.input == 0 then
-      v.silentCount = v.silentCount + DT
-    end
+  --   if #v.input == 0 then
+  --     v.silentCount = v.silentCount + DT
+  --   end
 
-    if v.silentCount >= 30 then
-      v.peer:reset()
-    end
-  end
+  --   if v.silentCount >= 30 then
+  --     v.peer:reset()
+  --   end
+  -- end
 
   for k,v in pairs(state.clients) do
     if contains(v.input, 'up') then
@@ -160,6 +162,8 @@ function love.update (dt)
   end
 
   DT = 0
+
+  -- print(dt)
 end
 
 function love.draw ()

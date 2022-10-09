@@ -14,37 +14,37 @@ local rdt = 0
 
 local state = {}
 local currentState
-local readyFlag = false
 
 local function interpolate (rdt, stateOne, stateTwo)  
   local x, y, x1, x2, y1, y2, deltaX, deltaY
   local result = {}
   
   for i=1,#stateOne,1 do
-    x1 = math.floor(stateOne[i][1])
-    y1 = math.floor(stateOne[i][2])
-    x2 = math.floor(stateTwo[i][1])
-    y2 = math.floor(stateTwo[i][2])
-  
-    deltaY = y2 - y1
-    deltaX = x2 - x1
-  
-    if deltaY == 0 and deltaX == 0 then
-      x = x1
-      y = y1
-    elseif deltaY == 0 then
-      y = y1
-      x = math.floor(x1 + ((x2 - x1) * (rdt/tick)))
-    elseif deltaX == 0 then
-      x = x1
-      y = math.floor(y1 + (y2 - y1) * (rdt/tick))
-    else
-      x = math.floor(x1 + ((x2 - x1) * (rdt/tick)))
-      y = math.floor(y1 + (x - x1) * ((y2 - y1) / (x2 - x1)))
-    end
+    if (stateTwo[i] ~= nil) then
+      x1 = math.floor(stateOne[i][1])
+      y1 = math.floor(stateOne[i][2])
+      x2 = math.floor(stateTwo[i][1])
+      y2 = math.floor(stateTwo[i][2])
+    
+      deltaY = y2 - y1
+      deltaX = x2 - x1
+    
+      if deltaY == 0 and deltaX == 0 then
+        x = x1
+        y = y1
+      elseif deltaY == 0 then
+        y = y1
+        x = math.floor(x1 + ((x2 - x1) * (rdt/tick)))
+      elseif deltaX == 0 then
+        x = x1
+        y = math.floor(y1 + (y2 - y1) * (rdt/tick))
+      else
+        x = math.floor(x1 + ((x2 - x1) * (rdt/tick)))
+        y = math.floor(y1 + (x - x1) * ((y2 - y1) / (x2 - x1)))
+      end
 
-    table.insert(result, { x, y })
-    -- print('x1: ' .. x1 .. ', y1: ' .. y1 .. ', x2: ' .. x2 .. ', y2: ' .. y2 .. ', x: ' .. x .. ', y: ' .. y )
+      table.insert(result, { x, y })
+    end
   end
 
   return result
@@ -70,11 +70,10 @@ function love.update(dt)
   if timer >= tick then
     timer = 0
     peer:send(TSerial.pack(keys))
-    keys = {}
   end
 
   local status, error = pcall(function ()
-    event = host:service()
+    event = host:service(10)
   end)
 
   if event then
@@ -83,7 +82,7 @@ function love.update(dt)
     end
   end
 
-  if #state >= 4 then    
+  if #state >= 4 then
     -- If we're ever 16 frames behind, catch up.
     if #state >= 16 then
       for i=1,#state - 4,1 do
@@ -100,6 +99,7 @@ function love.update(dt)
     end
   end
 
+  keys = {}
   DT = 0
 end
 
