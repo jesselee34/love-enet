@@ -1,8 +1,12 @@
-enet = require 'enet'
-local inspect = require 'inspect'
+local enet = require 'enet'
+local TSerial = require 't-serial'
 
 local host = nil
 local event = nil
+local DT = 0
+local tick = 0.0166
+local timer = 0
+local frame = 1
 
 local state = {
   clients = {},
@@ -12,16 +16,6 @@ local world
 local leftB, rightB, topB, bottomB
 local leftS, rightS, topS, bottomS
 local leftF, rightF, topF, bottomF
-
-local function parse (str)
-  local result = {}
-
-  for token in string.gmatch(str, '[^,]+') do
-    table.insert(result, token)
-  end
-
-  return result
-end
 
 local function createClient ()
   return {
@@ -34,41 +28,26 @@ end
 local function contains (tbl, val)
   local result = false
 
-  for i,v in ipairs(tbl) do
-    if v == val then
-      result = true
-      break
+  if type(tbl) == 'table' then
+    for i,v in ipairs(tbl) do
+      if v == val then
+        result = true
+        break
+      end
     end
   end
 
   return result
 end
 
-local function stringify (tbl)
-  local result = ''
-  local len = 0
-  local i = 0
-  local x, y
+local function pack (frm, clients)
+  local result = { frame = frm }
 
-  for k,v in pairs(tbl) do
-    len = len + 1
+  for k,v in pairs(clients) do
+    table.insert(result, { v.body:getPosition() })
   end
 
-  for k,v in pairs(tbl) do
-    i = i + 1
-    x,y = v.body:getPosition()
-
-    if i == len then
-      result = result .. x .. ',' .. y
-    else
-      
-      result = result .. x .. ',' .. y .. ','
-    end
-  end
-
-  result = result .. ',' .. '1' .. ',' .. '1'
-
-  return result
+  return TSerial.pack(result)
 end
 
 function love.load (args)
@@ -94,8 +73,12 @@ function love.load (args)
 end
 
 function love.update (dt)
+  DT = dt
+  timer = timer + DT
+  if DT >= tick then DT = tick end
+  
   event = host:service(100)
-  world:update(dt)
+  world:update(DT)
 
   if event then
     if event.type == "connect" then
@@ -108,32 +91,50 @@ function love.update (dt)
           state.clients[event.peer].shape,
           1
         )
+
+        state.clients[event.peer].body:setFixedRotation(true)
       end
+    end
+
+    if event.type == "disconnect" then
+      state.clients[event.peer] = nil
     end
 
     if event.type == "receive" then
-      local keys = parse(event.data)
-      state.clients[event.peer].input = event.data
-      
-      if contains(keys, 'up') then
-        state.clients[event.peer].body:applyForce(0, -50)
-      end
-
-      if contains(keys, 'right') then
-        state.clients[event.peer].body:applyForce(50, 0)
-      end
-
-      if contains(keys, 'down') then
-        state.clients[event.peer].body:applyForce(0, 50)
-      end
-
-      if contains(keys, 'left') then
-        state.clients[event.peer].body:applyForce(-50, 0)
-      end
-      
-      host:broadcast(stringify(state.clients))
+      local keys = TSerial.unpack(event.data)
+      state.clients[event.peer].input = keys
     end
   end
+
+  for k,v in pairs(state.clients) do
+    if contains(v.input, 'up') then
+      v.body:applyForce(0, -50)
+    end
+
+    if contains(v.input, 'right') then
+      v.body:applyForce(50, 0)
+    end
+
+    if contains(v.input, 'down') then
+      v.body:applyForce(0, 50)
+    end
+
+    if contains(v.input, 'left') then
+      v.body:applyForce(-50, 0)
+    end
+  end
+
+  if timer >= tick then
+    timer = 0
+    host:broadcast(pack(frame, state.clients), 0, 'unreliable')
+    frame = frame + 1
+
+    if frame >= 60 then
+      frame = 1
+    end
+  end
+
+  DT = 0
 end
 
 function love.draw ()
@@ -142,7 +143,9 @@ function love.draw ()
   love.graphics.setColor(255, 255, 255)
 
   for k,v in pairs(state.clients) do
-    love.graphics.print('inputs: ' .. v.input, 10, offset)
+    if type(v.input) == 'table' then
+      love.graphics.print('inputs: ' .. TSerial.pack(v.input), 10, offset)
+    end
     offset = offset + 20
 
     love.graphics.polygon('fill', v.body:getWorldPoints(v.shape:getPoints()))
