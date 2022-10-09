@@ -4,9 +4,12 @@ local TSerial = require 't-serial'
 local host = nil
 local peer = nil
 local tick = 0.0166
-local timer = 0
+local sendFrequency = 0.0166
+local sendTimer = 0
 local keys = {}
 local event
+local URI = 'localhost:3000'
+-- local URI = '159.223.99.80:2555'
 
 local DT = 0
 -- rdt is the time since the last 1/60 tick.
@@ -53,8 +56,7 @@ end
 function love.load(args)
 	-- establish a connection to host on same PC
 	host = enet.host_create()
-  peer = host:connect("localhost:3000")
-  -- peer = host:connect("159.223.99.80:2555")
+  peer = host:connect(URI)
 end
 
 function love.update(dt)
@@ -66,14 +68,15 @@ function love.update(dt)
   if love.keyboard.isDown('left') then table.insert(keys, 'left') end
   if love.keyboard.isDown('right') then table.insert(keys, 'right') end
 
-  timer = timer + DT
-  if timer >= tick then
-    timer = 0
+  sendTimer = sendTimer + DT
+  if sendTimer >= sendFrequency then
+    sendTimer = 0
     peer:send(TSerial.pack(keys))
+    host:flush()
   end
 
   local status, error = pcall(function ()
-    event = host:service(10)
+    event = host:service()
   end)
 
   if event then

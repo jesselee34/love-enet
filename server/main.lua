@@ -7,6 +7,7 @@ local DT = 0
 local tick = 0.0166
 local timer = 0
 local frame = 1
+local time = 0
 
 local state = {
   clients = {},
@@ -57,7 +58,7 @@ end
 
 function love.load (args)
 	-- establish host for receiving msg
-	host = enet.host_create("localhost:3000")
+	host = enet.host_create('localhost:3000')
 
   world = love.physics.newWorld(0, 0, false)
 
@@ -82,56 +83,61 @@ function love.update (dt)
   timer = timer + DT
   if DT >= tick then DT = tick end
 
-  local status, error = pcall(function ()
-    event = host:service(100)
-  end)
+  local done = false
+  while done == false do
+    local status, error = pcall(function ()
+      event = host:service()
+    end)
+
+    if event then
+      if event.type == "connect" then
+        if state.clients[event.peer:connect_id()] == nil then
+          state.clients[event.peer:connect_id()] = createClient(event.peer)
+          state.clients[event.peer:connect_id()].body = love.physics.newBody(world, 10, 10, 'dynamic')
+          state.clients[event.peer:connect_id()].shape = love.physics.newRectangleShape(10, 10)
+          state.clients[event.peer:connect_id()].fixture = love.physics.newFixture(
+            state.clients[event.peer:connect_id()].body,
+            state.clients[event.peer:connect_id()].shape,
+            1
+          )
   
-  world:update(DT)
-
-  if event then
-    if event.type == "connect" then
-      if state.clients[event.peer:connect_id()] == nil then
-        state.clients[event.peer:connect_id()] = createClient(event.peer)
-        state.clients[event.peer:connect_id()].body = love.physics.newBody(world, 10, 10, 'dynamic')
-        state.clients[event.peer:connect_id()].shape = love.physics.newRectangleShape(10, 10)
-        state.clients[event.peer:connect_id()].fixture = love.physics.newFixture(
-          state.clients[event.peer:connect_id()].body,
-          state.clients[event.peer:connect_id()].shape,
-          1
-        )
-
-        state.clients[event.peer:connect_id()].body:setFixedRotation(true)
+          state.clients[event.peer:connect_id()].body:setFixedRotation(true)
+        end
       end
-    end
-
-    if event.type == "receive" then
-      local keys = TSerial.unpack(event.data)
-      state.clients[event.peer:connect_id()].input = keys
+  
+      if event.type == "receive" then
+        local keys = TSerial.unpack(event.data)
+        state.clients[event.peer:connect_id()].input = keys
+      end
+    else
+      done = true
     end
   end
 
+  world:update(DT)
+
   -- Handle any zombie or disconnected peers
-  -- for k,v in pairs(state.clients) do
-  --   if v.peer:state() == 'zombie' or v.peer:state() == 'disconnected' then
-  --     v.zombieCount = v.zombieCount + DT
-  --   else
-  --     v.zombieCount = 0
-  --   end
+  for k,v in pairs(state.clients) do
+    if v.peer:state() == 'zombie' or v.peer:state() == 'disconnected' then
+      v.zombieCount = v.zombieCount + DT
+    else
+      v.zombieCount = 0
+    end
 
-  --   if v.zombieCount >= 5 then
-  --     v.peer:disconnect()
-  --     v.body:destroy()
-  --     state.clients[k] = nil
-  --   end
+    if v.zombieCount >= 5 then
+      v.peer:disconnect()
+      v.body:destroy()
+      state.clients[k] = nil
+    end
 
-  --   if #v.input == 0 then
-  --     v.silentCount = v.silentCount + DT
-  --   end
+    if #v.input == 0 then
+      v.silentCount = v.silentCount + DT
+    end
 
-  --   if v.silentCount >= 30 then
-  --     v.peer:reset()
-  --   end
-  -- end
+    if v.silentCount >= 30 then
+      v.peer:reset()
+    end
+  end
 
   for k,v in pairs(state.clients) do
     if contains(v.input, 'up') then
@@ -154,6 +160,7 @@ function love.update (dt)
   if timer >= tick then
     timer = 0
     host:broadcast(pack(frame, state.clients), 0, 'unreliable')
+    host:flush()
     frame = frame + 1
 
     if frame >= 60 then
@@ -162,8 +169,6 @@ function love.update (dt)
   end
 
   DT = 0
-
-  -- print(dt)
 end
 
 function love.draw ()
